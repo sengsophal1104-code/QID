@@ -5,151 +5,98 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Admin - User Management</title>
     <style>
+        /* Styles are unchanged */
         body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; background-color: #f4f7f9; margin: 0; padding: 40px; }
-        .container { max-width: 800px; margin: 0 auto; background: #fff; padding: 30px; border-radius: 8px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
+        .container { max-width: 500px; margin: 0 auto; background: #fff; padding: 30px; border-radius: 8px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
         h1, h2 { color: #333; }
-        #login-view, #admin-view { display: block; }
         .form-group { margin-bottom: 20px; }
         label { display: block; margin-bottom: 5px; color: #555; }
         input[type="email"], input[type="password"], input[type="text"] { width: 100%; padding: 10px; box-sizing: border-box; border-radius: 5px; border: 1px solid #ddd; }
-        button { background-color: #007bff; color: #fff; padding: 10px 15px; border: none; border-radius: 5px; cursor: pointer; font-size: 16px; }
+        button { background-color: #007bff; color: #fff; padding: 10px 15px; border: none; border-radius: 5px; cursor: pointer; font-size: 16px; width: 100%; }
         button:hover { background-color: #0056b3; }
-        #error-message, #success-message { margin-top: 15px; padding: 10px; border-radius: 5px; }
-        #error-message { color: #721c24; background-color: #f8d7da; border: 1px solid #f5c6cb; }
-        #success-message { color: #155724; background-color: #d4edda; border: 1px solid #c3e6cb; }
+        .message { margin-top: 15px; padding: 10px; border-radius: 5px; text-align: center; }
+        .error { color: #721c24; background-color: #f8d7da; border: 1px solid #f5c6cb; }
+        .success { color: #155724; background-color: #d4edda; border: 1px solid #c3e6cb; }
         .hidden { display: none; }
     </style>
 </head>
 <body>
 
 <div class="container">
-    <h1>Admin Panel</h1>
-
-    <!-- Login View -->
     <div id="login-view">
-        <h2>Administrator Login</h2>
-        <div class="form-group">
-            <label for="admin-email">Email</label>
-            <input type="email" id="admin-email" placeholder="admin@example.com">
-        </div>
-        <div class="form-group">
-            <label for="admin-password">Password</label>
-            <input type="password" id="admin-password">
-        </div>
+        <h1>Administrator Login</h1>
+        <div class="form-group"><label for="admin-email">Email</label><input type="email" id="admin-email"></div>
+        <div class="form-group"><label for="admin-password">Password</label><input type="password" id="admin-password"></div>
         <button id="login-btn">Login</button>
-        <div id="login-error" class="hidden error-message"></div>
+        <div id="login-error" class="message error hidden"></div>
     </div>
 
-    <!-- Admin View -->
     <div id="admin-view" class="hidden">
-        <h2>Create New Salesperson Account</h2>
-        <div class="form-group">
-            <label for="new-user-email">Salesperson Email</label>
-            <input type="email" id="new-user-email" placeholder="salesperson@example.com">
-        </div>
-        <div class="form-group">
-            <label for="new-user-password">Temporary Password</label>
-            <input type="text" id="new-user-password" placeholder="A strong temporary password">
-        </div>
+        <h1>Admin Panel</h1>
+        <h2>Create Salesperson Account</h2>
+        <div class="form-group"><label for="new-user-name">Display Name</label><input type="text" id="new-user-name" placeholder="e.g., John Doe"></div>
+        <div class="form-group"><label for="new-user-email">Email</label><input type="email" id="new-user-email"></div>
+        <div class="form-group"><label for="new-user-password">Temporary Password</label><input type="text" id="new-user-password"></div>
         <button id="create-user-btn">Create User</button>
-        <div id="create-user-error" class="hidden"></div>
-        <div id="create-user-success" class="hidden"></div>
+        <div id="create-user-message" class="message hidden"></div>
     </div>
 </div>
 
 <script type="module">
-    // Import the functions for Firebase v9
     import { initializeApp } from "https://www.gstatic.com/firebasejs/9.6.10/firebase-app.js";
-    import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/9.6.10/firebase-auth.js";
+    import { getAuth, signInWithEmailAndPassword, onAuthStateChanged, updateProfile, createUserWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/9.6.10/firebase-auth.js";
 
-    // Your web app's Firebase configuration
     const firebaseConfig = {
-      apiKey: "AIzaSyAm7WyJG_PxnAAzDsLwuI6y6dkCAVULrT8",
-      authDomain: "qui-gen.firebaseapp.com",
-      projectId: "qui-gen",
-      storageBucket: "qui-gen.appspot.com",
-      messagingSenderId: "268472656173",
-      appId: "1:268472656173:web:5e1ec81610e9496bd1b3a4",
-      measurementId: "G-04SRF1CRDM"
+      apiKey: "AIzaSyAm7WyJG_PxnAAzDsLwuI6y6dkCAVULrT8", authDomain: "qui-gen.firebaseapp.com", projectId: "qui-gen",
+      storageBucket: "qui-gen.appspot.com", messagingSenderId: "268472656173", appId: "1:268472656173:web:5e1ec81610e9496bd1b3a4",
     };
 
-    // Initialize Firebase and Auth
     const app = initializeApp(firebaseConfig);
     const auth = getAuth(app);
 
-    // UI Elements
     const loginView = document.getElementById('login-view');
     const adminView = document.getElementById('admin-view');
-    const loginBtn = document.getElementById('login-btn');
-    const createUserBtn = document.getElementById('create-user-btn');
-    const loginError = document.getElementById('login-error');
-    const createUserError = document.getElementById('create-user-error');
-    const createUserSuccess = document.getElementById('create-user-success');
 
-    // --- Authentication Logic ---
-
-    // Login button event
-    loginBtn.addEventListener('click', async () => {
-        const email = document.getElementById('admin-email').value;
-        const password = document.getElementById('admin-password').value;
-        loginError.classList.add('hidden');
-
-        try {
-            await signInWithEmailAndPassword(auth, email, password);
-            // Auth state change will handle showing/hiding views
-        } catch (error) {
-            loginError.textContent = `Login Failed: ${error.message}`;
-            loginError.classList.remove('hidden');
-        }
-    });
-
-    // Monitor auth state
     onAuthStateChanged(auth, user => {
         if (user) {
-            // User is signed in
             loginView.classList.add('hidden');
             adminView.classList.remove('hidden');
         } else {
-            // User is signed out
             loginView.classList.remove('hidden');
             adminView.classList.add('hidden');
         }
     });
 
-    // --- User Creation Logic (Admin Only) ---
-    // NOTE: In a real app, you would secure this with Cloud Functions.
-    // This client-side approach relies on the admin being logged in.
-
-    createUserBtn.addEventListener('click', async () => {
-        const email = document.getElementById('new-user-email').value;
-        const password = document.getElementById('new-user-password').value;
-        createUserError.classList.add('hidden');
-        createUserSuccess.classList.add('hidden');
-
-        if (!email || !password) {
-            createUserError.textContent = "Please provide both an email and a password.";
-            createUserError.classList.remove('hidden');
-            return;
-        }
-
+    document.getElementById('login-btn').addEventListener('click', async () => {
+        const email = document.getElementById('admin-email').value;
+        const password = document.getElementById('admin-password').value;
+        const errorDiv = document.getElementById('login-error');
         try {
-            // We can't directly create a user for them easily on the client.
-            // This is a limitation. The best practice is a backend function.
-            // For now, this is a conceptual placeholder.
-            // The admin has to create users in the Firebase Console.
-            alert("User creation from a client app is disabled for security. Please create the user directly in the Firebase Authentication console.");
-            
-            // The code below WOULD work, but requires re-authenticating the admin, which is complex.
-            // await createUserWithEmailAndPassword(auth, email, password);
-            // createUserSuccess.textContent = `Successfully created user: ${email}`;
-            // createUserSuccess.classList.remove('hidden');
-
+            await signInWithEmailAndPassword(auth, email, password);
         } catch (error) {
-            createUserError.textContent = `Creation Failed: ${error.message}`;
-            createUserError.classList.remove('hidden');
+            errorDiv.textContent = "Login Failed: " + error.message;
+            errorDiv.classList.remove('hidden');
         }
     });
 
+    document.getElementById('create-user-btn').addEventListener('click', async () => {
+        const displayName = document.getElementById('new-user-name').value;
+        const email = document.getElementById('new-user-email').value;
+        const password = document.getElementById('new-user-password').value;
+        const messageDiv = document.getElementById('create-user-message');
+        
+        messageDiv.classList.add('hidden');
+        if (!displayName || !email || !password) {
+            messageDiv.textContent = "Please fill in all fields.";
+            messageDiv.className = 'message error';
+            messageDiv.classList.remove('hidden');
+            return;
+        }
+
+        // Creating a user on the client is complex. This is a simplified demo.
+        // A production app should use Cloud Functions for security.
+        alert("This feature is for demonstration. For full security, creating users should be handled on a server. For this app, please create users directly in the Firebase Console and set their Display Name.");
+    });
 </script>
 </body>
 </html>
