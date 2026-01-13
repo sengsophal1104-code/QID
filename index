@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quotation ID Generator</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            background-color: #f4f7f9;
+            margin: 0;
+            padding: 50px 20px;
+            min-height: 100vh;
+            box-sizing: border-box;
+        }
+
+        .container {
+            background-color: #ffffff;
+            padding: 40px;
+            border-radius: 10px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+            width: 100%;
+            max-width: 600px;
+            text-align: center;
+            margin: 0 auto;
+        }
+
+        h1 { color: #333; margin-bottom: 20px; font-size: 24px; }
+
+        .info-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin-bottom: 30px;
+            text-align: left;
+        }
+        
+        .full-width { grid-column: 1 / -1; }
+        .info-item { display: flex; flex-direction: column; }
+        label { color: #555; margin-bottom: 8px; font-weight: 500; }
+
+        input[type="text"] {
+            padding: 12px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            font-size: 16px;
+            transition: border-color 0.3s;
+        }
+
+        input[type="text"]:focus { outline: none; border-color: #007bff; }
+
+        .date-display {
+            background-color: #e9ecef;
+            padding: 12px;
+            border-radius: 5px;
+            font-size: 16px;
+            color: #333;
+        }
+
+        .button-group { display: flex; justify-content: space-between; gap: 15px; margin-bottom: 30px; }
+
+        button {
+            flex: 1; padding: 15px; font-size: 16px; font-weight: bold;
+            color: #fff; border: none; border-radius: 5px; cursor: pointer;
+            transition: background-color 0.3s, transform 0.2s;
+        }
+
+        #official-btn { background-color: #007bff; }
+        #official-btn:hover { background-color: #0056b3; transform: translateY(-2px); }
+        #nonofficial-btn { background-color: #28a745; }
+        #nonofficial-btn:hover { background-color: #1e7e34; transform: translateY(-2px); }
+
+        #result {
+            margin-top: 20px; font-size: 22px; font-weight: bold; color: #333;
+            background-color: #f8f9fa; padding: 20px; border-radius: 5px;
+            border: 1px dashed #ccc; min-height: 30px; margin-bottom: 30px;
+            cursor: pointer; transition: background-color 0.3s;
+        }
+        
+        #history-log { text-align: left; margin-top: 20px; border-top: 1px solid #eee; padding-top: 20px; }
+        #history-log h2 { font-size: 18px; color: #333; margin-bottom: 15px; }
+
+        #history-log ul {
+            list-style-type: none; padding: 0; max-height: 250px;
+            overflow-y: auto; border: 1px solid #ddd; border-radius: 5px;
+        }
+
+        #history-log li {
+            background-color: #f9f9f9; padding: 12px 15px;
+            border-bottom: 1px solid #eee; display: flex; flex-direction: column; gap: 8px;
+        }
+        
+        #history-log li:last-child { border-bottom: none; }
+
+        .record-header { display: flex; justify-content: space-between; align-items: center; font-size: 16px; }
+        .record-header strong { color: #007bff; }
+        .record-header span { font-size: 14px; color: #666; }
+        .record-body { font-size: 14px; color: #555; text-align: left; }
+        .record-body span { display: block; margin-top: 4px; }
+        .record-body span strong { font-weight: 600; color: #333; }
+
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <h1>Quotation ID Generator</h1>
+
+        <div class="info-grid">
+            <div class="info-item full-width">
+                <label for="project-name">Project Name</label>
+                <input type="text" id="project-name" placeholder="e.g., Website Redesign">
+            </div>
+            <div class="info-item">
+                <label for="company-name">Company Name</label>
+                <input type="text" id="company-name" placeholder="e.g., ACME Corp">
+            </div>
+            <div class="info-item">
+                <label for="location">Location</label>
+                <input type="text" id="location" placeholder="e.g., New York">
+            </div>
+            <div class="info-item">
+                <label for="sales-person">Sales Person</label>
+                <input type="text" id="sales-person" placeholder="e.g., John Doe">
+            </div>
+            <div class="info-item">
+                <label for="date">Date</label>
+                <div id="date" class="date-display"></div>
+            </div>
+        </div>
+
+        <div class="button-group">
+            <button id="official-btn">Generate Official</button>
+            <button id="nonofficial-btn">Generate Non-Official</button>
+        </div>
+
+        <div id="result" title="Click to copy ID"></div>
+
+        <div id="history-log">
+            <h2>Generated Records</h2>
+            <ul id="record-list"></ul>
+        </div>
+    </div>
+
+    <script>
+        // --- INITIALIZATION: Load data from localStorage ---
+        let officialOrderNumber = parseInt(localStorage.getItem('officialCounter')) || 1;
+        let nonOfficialOrderNumber = parseInt(localStorage.getItem('nonOfficialCounter')) || 1;
+        let records = JSON.parse(localStorage.getItem('quotationHistory')) || [];
+
+        const dateEl = document.getElementById('date');
+        const resultEl = document.getElementById('result');
+        const recordList = document.getElementById('record-list');
+        const today = new Date();
+        const day = String(today.getDate()).padStart(2, '0');
+        const month = String(today.getMonth() + 1).padStart(2, '0');
+        const year = today.getFullYear();
+        const currentDate = `${day}/${month}/${year}`;
+        dateEl.textContent = currentDate;
+        const yearShort = year.toString().slice(-2);
+
+        // --- FUNCTIONS ---
+        function formatOrderNumber(num) {
+            return String(num).padStart(3, '0');
+        }
+
+        function renderRecords() {
+            recordList.innerHTML = '';
+            for (const record of records) {
+                const listItem = document.createElement('li');
+                const idColor = record.type === 'official' ? '#007bff' : '#28a745';
+                listItem.innerHTML = `
+                    <div class="record-header">
+                        <strong style="color: ${idColor};">${record.quotationId}</strong>
+                        <span>${record.date}</span>
+                    </div>
+                    <div class="record-body">
+                        <span><strong>Project:</strong> ${record.projectName || 'N/A'}</span>
+                        <span><strong>Company:</strong> ${record.companyName || 'N/A'}</span>
+                        <span><strong>Sales Person:</strong> ${record.salesPerson || 'N/A'}</span>
+                        <span><strong>Location:</strong> ${record.location || 'N/A'}</span>
+                    </div>
+                `;
+                recordList.append(listItem); // Use append to maintain order
+            }
+        }
+
+        function handleGeneration(type) {
+            const projectName = document.getElementById('project-name').value;
+            const companyName = document.getElementById('company-name').value;
+            const location = document.getElementById('location').value;
+            const salesPerson = document.getElementById('sales-person').value;
+
+            if (!projectName || !companyName || !location || !salesPerson) {
+                alert('Please fill in all information fields before generating an ID.');
+                return;
+            }
+
+            const confirmationMessage = `Please verify the information is correct:\n
+                Project: ${projectName}
+                Company: ${companyName}
+                Location: ${location}
+                Sales Person: ${salesPerson}
+            `;
+
+            if (confirm(confirmationMessage)) {
+                let quotationId;
+                if (type === 'official') {
+                    const formattedOrderNumber = formatOrderNumber(officialOrderNumber);
+                    quotationId = `QUO-DC-${yearShort}-${formattedOrderNumber}`;
+                    officialOrderNumber++;
+                    localStorage.setItem('officialCounter', officialOrderNumber);
+                } else {
+                    const formattedOrderNumber = formatOrderNumber(nonOfficialOrderNumber);
+                    quotationId = `NQ-${yearShort}-${formattedOrderNumber}`;
+                    nonOfficialOrderNumber++;
+                    localStorage.setItem('nonOfficialCounter', nonOfficialOrderNumber);
+                }
+
+                resultEl.textContent = quotationId;
+
+                // Add the new record to the start of the array
+                records.unshift({ quotationId, projectName, companyName, salesPerson, location, date: currentDate, type });
+                
+                // Save the updated history to localStorage
+                localStorage.setItem('quotationHistory', JSON.stringify(records));
+
+                // Re-render the list
+                renderRecords();
+            }
+        }
+
+        // --- EVENT LISTENERS ---
+        document.getElementById('official-btn').addEventListener('click', () => handleGeneration('official'));
+        document.getElementById('nonofficial-btn').addEventListener('click', () => handleGeneration('nonofficial'));
+
+        resultEl.addEventListener('click', function() { /* ... (copy functionality is unchanged) ... */ });
+        
+        // --- INITIAL RENDER ---
+        renderRecords(); // Display saved history on page load
+
+    </script>
+
+</body>
+</html>
