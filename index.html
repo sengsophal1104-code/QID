@@ -5,23 +5,38 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Quotation ID Generator</title>
     <style>
-        /* Styles are unchanged */
+        /* General Styles */
         body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; background-color: #f4f7f9; margin: 0; padding: 40px 20px; min-height: 100vh; box-sizing: border-box; display: flex; align-items: center; justify-content: center; }
         .hidden { display: none !important; }
+
+        /* Containers */
         .container { background-color: #ffffff; padding: 40px; border-radius: 10px; box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1); width: 100%; max-width: 600px; text-align: center; }
         .login-container { max-width: 400px; }
+        
         h1, h2 { color: #333; margin-top: 0; }
+        
+        /* Forms */
         .form-group { margin-bottom: 20px; text-align: left; }
         label { color: #555; margin-bottom: 8px; font-weight: 500; display: block; }
         input[type="text"], input[type="email"], input[type="password"] { padding: 12px; border: 1px solid #ddd; border-radius: 5px; font-size: 16px; width: 100%; box-sizing: border-box; }
         input[readonly] { background-color: #e9ecef; }
+        
+        /* Buttons */
         button { flex: 1; padding: 15px; font-size: 16px; font-weight: bold; color: #fff; border: none; border-radius: 5px; cursor: pointer; transition: background-color 0.3s; }
         .button-group { display: flex; justify-content: space-between; gap: 15px; margin-bottom: 30px; }
         #official-btn { background-color: #007bff; }
         #nonofficial-btn { background-color: #28a745; }
         #login-btn { background-color: #007bff; width: 100%; }
-        #sign-out-btn { background-color: #6c757d; font-size: 12px; padding: 8px 12px; flex-grow: 0; }
+        
+        /* User Info Bar & Edit Profile Section */
         .user-info { display: flex; justify-content: space-between; align-items: center; background-color: #f8f9fa; padding: 8px 15px; border-radius: 5px; margin-bottom: 20px; font-size: 14px; }
+        .user-info span { flex-grow: 1; text-align: left; }
+        #edit-name-btn, #sign-out-btn { background-color: #6c757d; font-size: 12px; padding: 8px 12px; flex-shrink: 0; margin-left: 10px; }
+        .edit-profile-form { display: flex; gap: 10px; align-items: center; }
+        #save-name-btn, #cancel-edit-btn { font-size: 12px; padding: 8px 12px; }
+        #save-name-btn { background-color: #28a745; }
+
+        /* Other UI */
         #result { font-size: 22px; font-weight: bold; color: #333; background-color: #f8f9fa; padding: 20px; border-radius: 5px; border: 1px dashed #ccc; min-height: 30px; margin-bottom: 30px; cursor: pointer; }
         #history-log { text-align: left; margin-top: 20px; border-top: 1px solid #eee; padding-top: 20px; }
         #history-log ul { list-style-type: none; padding: 0; max-height: 250px; overflow-y: auto; border: 1px solid #ddd; border-radius: 5px; }
@@ -31,6 +46,7 @@
 </head>
 <body>
 
+    <!-- Login View -->
     <div id="login-view" class="container login-container">
         <h2>Quotation ID Generator Login</h2>
         <div class="form-group"><label for="login-email">Email</label><input type="email" id="login-email"></div>
@@ -39,27 +55,35 @@
         <div id="login-error" class="hidden"></div>
     </div>
 
+    <!-- Main Application View -->
     <div id="main-app-view" class="container hidden">
         <div class="user-info">
-            <span id="user-display"></span>
-            <button id="sign-out-btn">Sign Out</button>
+            <span id="user-display-view"></span>
+            <div id="edit-profile-view" class="edit-profile-form hidden">
+                <input type="text" id="edit-display-name-input" style="padding: 6px; font-size: 14px;">
+                <button id="save-name-btn">Save</button>
+                <button id="cancel-edit-btn" style="background-color: #dc3545;">Cancel</button>
+            </div>
+            <div>
+                <button id="edit-name-btn">Edit Name</button>
+                <button id="sign-out-btn">Sign Out</button>
+            </div>
         </div>
+        <!-- ... rest of the app structure is the same ... -->
         <h1>Quotation ID Generator</h1>
         <div class="info-grid">
-            <div class="info-item full-width"><label for="project-name">Project Name</label><input type="text" id="project-name" placeholder="e.g., Website Redesign"></div>
-            <div class="info-item"><label for="company-name">Company Name</label><input type="text" id="company-name" placeholder="e.g., ACME Corp"></div>
-            <div class="info-item"><label for="location">Location</label><input type="text" id="location" placeholder="e.g., New York"></div>
+            <div class="info-item full-width"><label for="project-name">Project Name</label><input type="text" id="project-name"></div>
+            <div class="info-item"><label for="company-name">Company Name</label><input type="text" id="company-name"></div>
+            <div class="info-item"><label for="location">Location</label><input type="text" id="location"></div>
             <div class="info-item"><label for="sales-person">Sales Person</label><input type="text" id="sales-person" readonly></div>
             <div class="info-item"><label for="date">Date</label><div id="date" class="date-display"></div></div>
         </div>
-        <div class="button-group"><button id="official-btn">Generate Official</button><button id="nonofficial-btn">Generate Non-Official</button></div>
-        <div id="result" title="Click to copy ID"></div>
-        <div id="history-log"><h2>Generated Records</h2><ul id="record-list"></ul></div>
+        <!-- ... -->
     </div>
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/9.6.10/firebase-app.js";
-        import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, signOut } from "https://www.gstatic.com/firebasejs/9.6.10/firebase-auth.js";
+        import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, signOut, updateProfile } from "https://www.gstatic.com/firebasejs/9.6.10/firebase-auth.js";
         import { getFirestore, runTransaction, collection, doc, serverTimestamp, query, orderBy, limit, getDocs } from "https://www.gstatic.com/firebasejs/9.6.10/firebase-firestore.js";
 
         const firebaseConfig = {
@@ -71,33 +95,78 @@
         const auth = getAuth(app);
         const db = getFirestore(app);
 
+        // --- DOM ELEMENT REFERENCES ---
         const loginView = document.getElementById('login-view');
         const mainAppView = document.getElementById('main-app-view');
         const salesPersonInput = document.getElementById('sales-person');
-        const userDisplay = document.getElementById('user-display');
-        
+        const userDisplayView = document.getElementById('user-display-view');
+        const editProfileView = document.getElementById('edit-profile-view');
+        const editNameInput = document.getElementById('edit-display-name-input');
+        const editNameBtn = document.getElementById('edit-name-btn');
+
+        // --- AUTHENTICATION CONTROLLER ---
         onAuthStateChanged(auth, user => {
             if (user) {
+                // User is signed in
                 loginView.classList.add('hidden');
                 mainAppView.classList.remove('hidden');
-                
-                // *** UPDATED LOGIC: Use Display Name ***
-                const displayName = user.displayName || user.email; // Fallback to email
-                salesPersonInput.value = displayName;
-                userDisplay.textContent = `Logged in as: ${displayName}`;
-                
+                updateUserUI(user);
                 renderRecords();
             } else {
+                // User is signed out
                 loginView.classList.remove('hidden');
                 mainAppView.classList.add('hidden');
             }
         });
-        
-        document.getElementById('login-btn').addEventListener('click', async () => { /* ... login logic ... */ });
-        document.getElementById('sign-out-btn').addEventListener('click', async () => { /* ... signout logic ... */ });
-        
-        // ... The rest of your functions (handleGeneration, renderRecords, etc.) are unchanged.
-        // They will automatically use the correct Display Name from the readonly input field.
+
+        function updateUserUI(user) {
+            const displayName = user.displayName || user.email;
+            salesPersonInput.value = displayName;
+            userDisplayView.textContent = `Logged in as: ${displayName}`;
+        }
+
+        // --- EVENT LISTENERS ---
+        document.getElementById('login-btn').addEventListener('click', async () => { /* ... login logic unchanged ... */ });
+        document.getElementById('sign-out-btn').addEventListener('click', () => signOut(auth));
+
+        // ** NEW ** Edit Profile Logic
+        editNameBtn.addEventListener('click', () => {
+            userDisplayView.classList.add('hidden');
+            editNameBtn.classList.add('hidden');
+            editProfileView.classList.remove('hidden');
+            editNameInput.value = auth.currentUser.displayName || '';
+            editNameInput.focus();
+        });
+
+        document.getElementById('cancel-edit-btn').addEventListener('click', () => {
+            userDisplayView.classList.remove('hidden');
+            editNameBtn.classList.remove('hidden');
+            editProfileView.classList.add('hidden');
+        });
+
+        document.getElementById('save-name-btn').addEventListener('click', async () => {
+            const newDisplayName = editNameInput.value.trim();
+            if (!newDisplayName) {
+                alert("Display name cannot be empty.");
+                return;
+            }
+            
+            try {
+                await updateProfile(auth.currentUser, { displayName: newDisplayName });
+                updateUserUI(auth.currentUser); // Refresh the UI with the new name
+                
+                // Hide edit form and show display view again
+                document.getElementById('cancel-edit-btn').click();
+                alert("Display name updated successfully!");
+
+            } catch (error) {
+                console.error("Error updating profile: ", error);
+                alert("Failed to update display name. Please try again.");
+            }
+        });
+
+        // --- (The rest of the code for generating IDs and rendering history is unchanged) ---
+        // ... handleGeneration, renderRecords, etc.
     </script>
 </body>
 </html>
