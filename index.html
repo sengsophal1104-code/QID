@@ -51,13 +51,13 @@
         <div id="history-log"><h2>Generated Records</h2><ul id="record-list"></ul></div>
     </div>
 
-    <!-- ========= JAVASCRIPT SECTION (UPDATED TO FIREBASE v9) ========= -->
+    <!-- ========= JAVASCRIPT SECTION (FIXED LOGIC) ========= -->
     <script type="module">
         // Import functions from the Firebase SDK
         import { initializeApp } from "https://www.gstatic.com/firebasejs/9.6.10/firebase-app.js";
-        import { getFirestore, runTransaction, collection, doc, serverTimestamp, query, orderBy, limit, getDocs, increment } from "https://www.gstatic.com/firebasejs/9.6.10/firebase-firestore.js";
+        import { getFirestore, runTransaction, collection, doc, serverTimestamp, query, orderBy, limit, getDocs } from "https://www.gstatic.com/firebasejs/9.6.10/firebase-firestore.js";
 
-        // Your web app's Firebase configuration (provided by you)
+        // Your web app's Firebase configuration
         const firebaseConfig = {
           apiKey: "AIzaSyAm7WyJG_PxnAAzDsLwuI6y6dkCAVULrT8",
           authDomain: "qui-gen.firebaseapp.com",
@@ -93,10 +93,9 @@
             recordList.innerHTML = '<p>Loading history...</p>';
             const historyCollection = collection(db, 'history');
             const q = query(historyCollection, orderBy('createdAt', 'desc'), limit(20));
-            
             const querySnapshot = await getDocs(q);
             
-            recordList.innerHTML = ''; // Clear loading message
+            recordList.innerHTML = '';
             querySnapshot.forEach(doc => {
                 const record = doc.data();
                 const listItem = document.createElement('li');
@@ -134,24 +133,42 @@ Project: ${projectName}\nCompany: ${companyName}\nLocation: ${location}\nSales P
                         const counterRef = doc(db, 'counters', 'main');
                         const counterDoc = await transaction.get(counterRef);
 
-                        const currentCounters = counterDoc.data() || { official: 0, nonOfficial: 0 };
-                        let orderNumber, quotationId;
+                        let newOrderNumber;
+                        let quotationId;
 
-                        if (type === 'official') {
-                            orderNumber = currentCounters.official + 1;
-                            quotationId = `QUO-DC-${yearShort}-${formatOrderNumber(orderNumber)}`;
-                            transaction.update(counterRef, { official: increment(1) });
+                        if (!counterDoc.exists()) {
+                            // This is the first run EVER. Initialize the counters document.
+                            newOrderNumber = 1;
+                            if (type === 'official') {
+                                transaction.set(counterRef, { official: 1, nonOfficial: 0 });
+                            } else {
+                                transaction.set(counterRef, { official: 0, nonOfficial: 1 });
+                            }
                         } else {
-                            orderNumber = currentCounters.nonOfficial + 1;
-                            quotationId = `NQ-${yearShort}-${formatOrderNumber(orderNumber)}`;
-                            transaction.update(counterRef, { nonOfficial: increment(1) });
+                            // Counters doc exists, increment the correct one.
+                            const data = counterDoc.data();
+                            if (type === 'official') {
+                                newOrderNumber = (data.official || 0) + 1;
+                                transaction.update(counterRef, { official: newOrderNumber });
+                            } else {
+                                newOrderNumber = (data.nonOfficial || 0) + 1;
+                                transaction.update(counterRef, { nonOfficial: newOrderNumber });
+                            }
+                        }
+                        
+                        // Generate the Quotation ID string
+                        if (type === 'official') {
+                            quotationId = `QUO-DC-${yearShort}-${formatOrderNumber(newOrderNumber)}`;
+                        } else {
+                            quotationId = `NQ-${yearShort}-${formatOrderNumber(newOrderNumber)}`;
                         }
 
+                        // Create the record in the 'history' collection
                         const historyRef = doc(db, 'history', quotationId);
                         transaction.set(historyRef, {
                             quotationId, projectName, companyName, salesPerson, location, 
                             date: currentDate, type, 
-                            createdAt: serverTimestamp()
+                            createdAt: serverTimestamp() // Correctly placed here
                         });
 
                         return quotationId;
@@ -161,23 +178,31 @@ Project: ${projectName}\nCompany: ${companyName}\nLocation: ${location}\nSales P
                     renderRecords();
 
                 } catch (e) {
-                    // Check if error is because counter doc doesn't exist
-                    if (e.message.includes("No document to update")) {
-                         // This is the first run, let's create the counter document
-                        await setDoc(doc(db, "counters", "main"), { official: 0, nonOfficial: 0 });
-                        alert("Database has been initialized. Please click 'Generate' again.");
-                    } else {
-                        console.error("Transaction failed: ", e);
-                        alert("Failed to generate ID. Please try again.");
-                    }
+                    console.error("Transaction failed: ", e);
+                    alert("Failed to generate ID. There might be a connection issue or a database permission error. Please try again.");
                 }
             }
         }
 
-        // --- EVENT LISTENERS (UNCHANGED) ---
+        // --- EVENT LISTENERS ---
         document.getElementById('official-btn').addEventListener('click', () => handleGeneration('official'));
         document.getElementById('nonofficial-btn').addEventListener('click', () => handleGeneration('nonofficial'));
-        resultEl.addEventListener('click', function() { /* copy functionality */ });
+
+        resultEl.addEventListener('click', function() {
+            const idToCopy = this.textContent;
+            if (idToCopy && !idToCopy.includes('Copied!')) {
+                navigator.clipboard.writeText(idToCopy).then(() => {
+                    const originalText = this.textContent;
+                    this.textContent = 'Copied!';
+                    this.style.backgroundColor = '#d4edda';
+                    
+                    setTimeout(() => {
+                        this.textContent = originalText;
+                        this.style.backgroundColor = '#f8f9fa';
+                    }, 1500);
+                });
+            }
+        });
 
         // --- INITIAL RENDER ---
         renderRecords();
